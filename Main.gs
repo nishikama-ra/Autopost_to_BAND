@@ -1,7 +1,18 @@
 /**
- * 定期実行用（トリガー設定用）
+ * 【本番用】メール投稿トリガー
  */
-function triggerGmailToBand() {
+function main_ProductionRun() {
+  setBandDestination('PROD'); // BandHelperに宛先セットを依頼
+  console.warn("⚠️ 本番モードでメール処理を開始します");
+  checkGmailAndPostToBand();
+}
+
+/**
+ * 【テスト用】エディタからのテスト実行
+ */
+function debug_TestRun() {
+  setBandDestination('TEST'); // BandHelperに宛先セットを依頼
+  console.log("🛠️ テストモードでメール処理を開始します");
   checkGmailAndPostToBand();
 }
 
