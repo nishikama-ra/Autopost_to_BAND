@@ -102,7 +102,7 @@ const CONFIG = {
     LONGITUDE: "139.502873",
     TITLE: "【西鎌倉 3時間おき天気予報】",
     TAG: "#天気予報",
-    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点 / 提供: OpenWeatherMap",
+    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点付近 (北緯35.322356/東経139.502873) / 提供: OpenWeatherMap",
     WEATHER_FORECAST_COUNT: 12,
     
     // 実行制御（10分で見切り、1分弱でリトライ）
@@ -123,7 +123,7 @@ const CONFIG = {
       { min: 802, max: 804, emoji: "☁️", label: "曇り" }
     ],
 
-    // 方位の定義（原文の記号を完全に再現）
+    // 方位の定義
     WIND_DIRECTIONS: [
       { label: "北", arrow: "⬇️" },
       { label: "北東", arrow: "↙️" },
