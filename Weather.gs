@@ -42,9 +42,17 @@ function doGet(e) {
 function postWeatherToBand() {
   const startTime = new Date().getTime();
   const conf = CONFIG.WEATHER_CONFIG;
+  // スクリプトプロパティからOpenWeatherMapのキーを取得
+  const apiKey = PropertiesService.getScriptProperties().getProperty('OPENWEATHER_API_KEY');
   
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${conf.LATITUDE}&longitude=${conf.LONGITUDE}&hourly=${conf.API_PARAMS}&timezone=Asia%2FTokyo`;
-  
+  if (!apiKey) {
+    sendWeatherErrorMail("APIキー 'OPENWEATHER_API_KEY' が設定されていません。");
+    return;
+  }
+
+  // OpenWeatherMap API URL (3時間おき予報)
+  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${conf.LATITUDE}&lon=${conf.LONGITUDE}&units=metric&appid=${apiKey}&lang=ja`;
+
   let response;
   let success = false;
   let lastError = "";
@@ -54,7 +62,7 @@ function postWeatherToBand() {
     if (elapsed > conf.TIMEOUT_MS) {
       lastError = `設定された制限時間(10分)を超えたため中断しました。`;
       console.error(lastError);
-      break; 
+      break;
     }
 
     try {
@@ -88,37 +96,39 @@ function postWeatherToBand() {
   // --- 解析・本文組み立て ---
   try {
     const data = JSON.parse(response.getContentText());
-    const hourly = data.hourly;
+    const list = data.list;
     const now = new Date();
     
-    let section1 = "【天気・気温】\n";
-    let section2 = "【降水確率・湿度・風】\n";
+    let section1 = "【天気・気温・風】\n";
+    let section2 = "【天気・降水確率・湿度】\n";
     let count = 0;
-    const maxForecast = 6; // 3時間おき×6回＝18時間分
 
-    for (let i = 0; i < hourly.time.length; i++) {
-      const forecastTime = new Date(hourly.time[i]);
+    for (let i = 0; i < list.length && count < conf.WEATHER_FORECAST_COUNT; i++) {
+      const item = list[i];
+      const forecastTime = new Date(item.dt * 1000);
       
-      // 現在時刻より後、かつ3時間おき、かつ18時間分まで
-      if (forecastTime > now && count < maxForecast) {
-        if (forecastTime.getHours() % 3 === 0) {
-          const timeStr = Utilities.formatDate(forecastTime, "JST", "MM/dd HH:00");
-          const temp = hourly.temperature_2m[i].toFixed(1);
-          const pop = hourly.precipitation_probability[i];
-          const hum = hourly.relative_humidity_2m[i];
-          const wind = hourly.wind_speed_10m[i].toFixed(1);
-          const dirDeg = hourly.wind_direction_10m[i];
-          const dirIdx = Math.round(dirDeg / 45) % 8;
-          const dirInfo = conf.WIND_DIRECTIONS[dirIdx];
-          const desc = conf.WEATHER_MAP[hourly.weathercode[i]] || "❓";
+      // 現在時刻より後の3時間おきデータを抽出
+      if (forecastTime > now) {
+        const timeStr = Utilities.formatDate(forecastTime, "JST", "MM/dd HH:00");
+        const temp = item.main.temp.toFixed(1);
+        const pop = Math.round(item.pop * 100);
+        const hum = item.main.humidity;
+        const wind = item.wind.speed.toFixed(1);
+        const dirDeg = item.wind.deg;
+        
+        const dirIdx = Math.round(dirDeg / 45) % 8;
+        const dirInfo = conf.WIND_DIRECTIONS[dirIdx];
+        
+        // 天気判定 (OpenWeatherMap IDを使用)
+        const weatherId = item.weather[0].id;
+        const weatherDisp = getWeatherDisplayFromConfig(weatherId);
 
-          // ブロック1: 天気と気温
-          section1 += `${timeStr}   ${desc}   🌡️ ${temp}℃\n`;
-          // ブロック2: 降水確率、湿度、風速（空行なし）
-          section2 += `${timeStr}   ☔ ${pop}% / 💧 ${hum}% / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
-          
-          count++;
-        }
+        // ブロック1: 天気・気温・風
+        section1 += `${timeStr}   ${weatherDisp.emoji} ${weatherDisp.label}   🌡️ ${temp}℃ / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
+        // ブロック2: 天気・降水確率・湿度
+        section2 += `${timeStr}   ${weatherDisp.emoji} ${weatherDisp.label}   ☔ ${pop}% / 💧 ${hum}%\n`;
+        
+        count++;
       }
     }
 
@@ -128,6 +138,15 @@ function postWeatherToBand() {
   } catch (e) {
     sendWeatherErrorMail("解析エラー: " + e.message);
   }
+}
+
+/**
+ * Configに定義された範囲に基づき、適切な表示用データを返す
+ */
+function getWeatherDisplayFromConfig(weatherId) {
+  const master = CONFIG.WEATHER_CONFIG.WEATHER_MAP_OWM;
+  const match = master.find(item => weatherId >= item.min && weatherId <= item.max);
+  return match || { emoji: "❓", label: "不明" };
 }
 
 /**
@@ -145,7 +164,7 @@ ${errorMessage}
 
 ■推測される原因:
 ・Google共有サーバーのIPアドレス制限（429エラー）
-・Open-Meteo APIの一時的なダウン
+・OpenWeatherMap APIの制限または障害
 
 この投稿はスキップされました。
 急ぎで投稿が必要な場合は、GASエディタから手動で debug_WeatherTest を実行してください。
