@@ -110,10 +110,10 @@ function postWeatherToBand() {
       // 現在時刻より後の3時間おきデータを抽出
       if (forecastTime > now) {
         const timeStr = Utilities.formatDate(forecastTime, "JST", "MM/dd HH:00");
-        const temp = item.main.temp.toFixed(1);
-        const pop = Math.round(item.pop * 100);
-        const hum = item.main.humidity;
-        const wind = item.wind.speed.toFixed(1);
+        const temp = item.main.temp.toFixed(1).padStart(4, ' ');
+        const pop = String(Math.round(item.pop * 100)).padStart(2, ' ');
+        const hum = String(item.main.humidity).padStart(2, ' ');
+        const wind = item.wind.speed.toFixed(1).padStart(4, ' ');
         const dirDeg = item.wind.deg;
         
         const dirIdx = Math.round(dirDeg / 45) % 8;
@@ -123,10 +123,14 @@ function postWeatherToBand() {
         const weatherId = item.weather[0].id;
         const weatherDisp = getWeatherDisplayFromConfig(weatherId);
 
+        // 天気名を全角2文字に揃えてガタつきを軽減
+        let labelStr = weatherDisp.label;
+        if (labelStr.length === 1) labelStr += "　";
+
         // ブロック1: 天気・気温・風
-        section1 += `${timeStr}   ${weatherDisp.emoji} ${weatherDisp.label}   🌡️ ${temp}℃ / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
+        section1 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   🌡️ ${temp}℃ / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
         // ブロック2: 天気・降水確率・湿度
-        section2 += `${timeStr}   ${weatherDisp.emoji} ${weatherDisp.label}   ☔ ${pop}% / 💧 ${hum}%\n`;
+        section2 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   ☔ ${pop}% / 💧 ${hum}%\n`;
         
         count++;
       }
