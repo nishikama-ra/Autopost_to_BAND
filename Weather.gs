@@ -68,7 +68,6 @@ function postWeatherToBand() {
       } else if (resCode === 429) {
         const waitSec = Math.round((conf.WAIT_TIME_BASE + Math.random() * 10000) / 1000);
         lastError = `API制限(429)が発生中`;
-        // ★ここを復活させました：ログに出すことで進捗が見えるようになります
         console.warn(`${lastError}。${waitSec}秒後にリトライします (${i + 1}/${conf.MAX_RETRIES})`);
         Utilities.sleep(waitSec * 1000);
       } else {
@@ -86,17 +85,22 @@ function postWeatherToBand() {
     return;
   }
 
-  // --- 以降の解析・投稿ロジックは変更なし ---
+  // --- 解析・本文組み立て ---
   try {
     const data = JSON.parse(response.getContentText());
     const hourly = data.hourly;
     const now = new Date();
-    let content = `${conf.TAG}\n${conf.TITLE}\n\n`;
+    
+    let section1 = "【天気・気温】\n";
+    let section2 = "【降水確率・湿度・風】\n";
     let count = 0;
+    const maxForecast = 6; // 3時間おき×6回＝18時間分
 
     for (let i = 0; i < hourly.time.length; i++) {
       const forecastTime = new Date(hourly.time[i]);
-      if (forecastTime > now && count < conf.WEATHER_FORECAST_COUNT) {
+      
+      // 現在時刻より後、かつ3時間おき、かつ18時間分まで
+      if (forecastTime > now && count < maxForecast) {
         if (forecastTime.getHours() % 3 === 0) {
           const timeStr = Utilities.formatDate(forecastTime, "JST", "MM/dd HH:00");
           const temp = hourly.temperature_2m[i].toFixed(1);
@@ -104,30 +108,22 @@ function postWeatherToBand() {
           const hum = hourly.relative_humidity_2m[i];
           const wind = hourly.wind_speed_10m[i].toFixed(1);
           const dirDeg = hourly.wind_direction_10m[i];
-          
-          // --- 方位変換の処理 ---
-          // APIから届く「0〜360度の数値」を、45度刻みで8方位（北、北東など）のインデックス(0〜7)に変換します
           const dirIdx = Math.round(dirDeg / 45) % 8;
-          // CONFIGにあるWIND_DIRECTIONSから、対応する矢印とラベルを取得します
           const dirInfo = conf.WIND_DIRECTIONS[dirIdx];
-          
-          // 天気コードをアイコン付きの文字列に変換
           const desc = conf.WEATHER_MAP[hourly.weathercode[i]] || "❓";
-          
-          // --- 本文組み立て（2行の大調整版） ---
-          // 1行目：時刻、天気、温度（見やすさのためスペースを調整）
-          content += `${timeStr}   ${desc}   🌡️ ${temp}℃\n`;
-          
-          // 2行目：時刻の下を完全に空けるため、全角スペースを6つ挿入します。
-          // これで「02/04 00:00」という文字幅を物理的に飛び越えます。
-          content += `　　　　　　☔ ${pop}% / 💧 ${hum}% / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n\n`;
+
+          // ブロック1: 天気と気温
+          section1 += `${timeStr}   ${desc}   🌡️ ${temp}℃\n`;
+          // ブロック2: 降水確率、湿度、風速（空行なし）
+          section2 += `${timeStr}   ☔ ${pop}% / 💧 ${hum}% / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
           
           count++;
         }
       }
     }
 
-    postToBand(content + `---\n${conf.FOOTER}`);
+    const finalContent = `${conf.TAG}\n${conf.TITLE}\n\n${section1}\n${section2}\n---\n${conf.FOOTER}`;
+    postToBand(finalContent);
     console.log("BANDへの投稿が完了しました。");
   } catch (e) {
     sendWeatherErrorMail("解析エラー: " + e.message);
@@ -141,9 +137,8 @@ function sendWeatherErrorMail(errorMessage) {
   const recipient = CONFIG.ERROR_MAIL.TO;
   const subject = "【GAS重要】天気予報の自動投稿に失敗しました";
   const body = `
-
 天気予報の自動投稿処理でエラーが発生しました。
-5回のリトライを試みましたが、情報を取得できませんでした。
+リトライを試みましたが、情報を取得できませんでした。
 
 ■発生したエラー内容:
 ${errorMessage}
@@ -152,8 +147,8 @@ ${errorMessage}
 ・Google共有サーバーのIPアドレス制限（429エラー）
 ・Open-Meteo APIの一時的なダウン
 
-この投稿はスキップされました。次回の定期実行（12時間後）に再度試行されます。
-急ぎで投稿が必要な場合は、GASエディタから手動で postWeatherToBand を実行してください。
+この投稿はスキップされました。
+急ぎで投稿が必要な場合は、GASエディタから手動で debug_WeatherTest を実行してください。
 `.trim();
 
   try {
