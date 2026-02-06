@@ -1,20 +1,4 @@
 /**
- * 【本番用】タイマートリガーにはこの関数をセット
- */
-function triggerPollen_Production() {
-  setBandDestination('PROD');
-  postPollenToBand();
-}
-
-/**
- * 【テスト用】エディタの「実行」ボタンで試す時用
- */
-function debug_PollenTest() {
-  setBandDestination('TEST');
-  postPollenToBand();
-}
-
-/**
  * 指定座標の5日分花粉情報をBANDに投稿する
  */
 function postPollenToBand() {
