@@ -1,22 +1,4 @@
 /**
- * 【本番用】メール投稿トリガー
- */
-function main_ProductionRun() {
-  setBandDestination('PROD'); // BandHelperに宛先セットを依頼
-  console.warn("⚠️ 本番モードでメール処理を開始します");
-  checkGmailAndPostToBand();
-}
-
-/**
- * 【テスト用】エディタからのテスト実行
- */
-function debug_TestRun() {
-  setBandDestination('TEST'); // BandHelperに宛先セットを依頼
-  console.log("🛠️ テストモードでメール処理を開始します");
-  checkGmailAndPostToBand();
-}
-
-/**
  * 未読メールをスキャンし、添付ファイルの保存とBANDへの投稿を行います。
  */
 function checkGmailAndPostToBand() {
@@ -38,13 +20,14 @@ function checkGmailAndPostToBand() {
       return;
     }
 
+    // 処理効率のため、各スレッドのメッセージをフラットに並べる
     let allMessages = [];
     threads.forEach(thread => {
       thread.getMessages().forEach(msg => {
         if (msg.isUnread()) {
           const fromRaw = msg.getFrom().toLowerCase();
           const foundSender = senderEmails.find(email => fromRaw.includes(email.toLowerCase()));
-          
+
           if (foundSender) {
             allMessages.push({
               message: msg,
@@ -58,14 +41,16 @@ function checkGmailAndPostToBand() {
 
     if (allMessages.length === 0) return;
 
+    // 日付順にソートして古いものから処理
     allMessages.sort((a, b) => a.date - b.date);
 
+    // 1回の実行制限件数で切り出し
     const targetData = allMessages.slice(0, CONFIG.MAX_THREADS_PER_RUN);
     const totalToProcess = targetData.length;
     console.log(`未読件数: ${allMessages.length} 件。今回の処理対象: ${totalToProcess} 件`);
 
     let processedCount = 0;
-    
+
     for (const data of targetData) {
       const message = data.message;
       const senderEmail = data.senderKey;
@@ -84,7 +69,7 @@ function checkGmailAndPostToBand() {
             const endMark = "このメールに返信されても";
             const startIndex = body.indexOf(startMark);
             const endIndex = body.indexOf(endMark);
-            
+
             if (startIndex !== -1 && endIndex !== -1) {
               // 「さん」から「このメールに返信〜」の間だけを抽出
               bodyForCheck = body.substring(startIndex + startMark.length, endIndex);
@@ -93,8 +78,7 @@ function checkGmailAndPostToBand() {
             }
           }
 
-          // 2. ルート判定（部分一致を防ぐため includes で厳格に判定）
-          // 件名または判定用本文に「湘南モノレール」等の名前が丸ごと入っているか
+          // 2. ルート判定
           const isPriorityRoute = filterConfig.priorityRoutes.some(route => 
             subject.includes(route) || bodyForCheck.includes(route)
           );
@@ -104,7 +88,7 @@ function checkGmailAndPostToBand() {
             bodyForCheck.includes(kw)
           );
 
-          // 全量投稿対象（優先路線）でもなく、かつ重要キーワードも含まれていない場合はスキップ
+          // 優先路線でもなく、重要キーワードも含まれていない場合はスキップ
           if (!isPriorityRoute && !isCriticalIssue) {
             console.log(`フィルタによりスキップ: ${subject}`);
             message.markRead();
@@ -130,13 +114,13 @@ function checkGmailAndPostToBand() {
           message.markRead();
           processedCount++;
           console.log(`完了(${processedCount}/${totalToProcess}): [${data.date}] ${message.getSubject()}`);
-          
+
           // --- 2. 特定住所が含まれる場合の別BAND投稿（ピーガルくん用） ---
           if (senderEmail === 'oshirase@kodomoanzen.police.pref.kanagawa.jp') {
             const watchAddresses = CONFIG.EXTRA_POST_CONFIG.WATCH_ADDRESSES;
             const plainBody = message.getPlainBody();
             const hasTargetAddress = watchAddresses.some(address => plainBody.includes(address));
-            
+
             if (hasTargetAddress) {
               console.log("特定住所（近隣地区）を検知したため、別BANDへも投稿します。");
               postToExtraBand(postBody, fileUrls);
@@ -147,11 +131,12 @@ function checkGmailAndPostToBand() {
           throw new Error("BAND APIへの投稿に失敗しました。");
         }
 
+        // 連続投稿によるAPI制限回避
         Utilities.sleep(10000);
 
       } catch (e) {
         console.error(`エラー: ${e.message} (${message.getSubject()})`);
-        
+
         if (CONFIG.ERROR_MAIL.TO) {
           const mailBody = CONFIG.ERROR_MAIL.TEMPLATE
             .replace('{errorMessage}', e.message)
@@ -200,7 +185,7 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 2. 「救出」するフッター行の特定（Copyrightなど）
+  // 2. 「救出」するフッター行の特定
   let savedFooter = "";
   if (rule.keepFrom) {
     const keepIndex = fullBody.indexOf(rule.keepFrom);
@@ -209,26 +194,28 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 3. 指定位置より下をカット（案内文など）
+  // 3. 指定位置より下をカット
   if (rule.cutOffString) {
     const cutIndex = body.indexOf(rule.cutOffString);
-    if (cutIndex !== -1) body = body.substring(0, cutIndex).trim();
+    if (cutIndex !== -1) {
+      body = body.substring(0, cutIndex).trim();
+    }
   }
 
   // 制御文字の除去
   const cleanBody = body.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
 
+  // 本文組み立て
   let content = "";
   if (tag) content += `${tag}\n`;
   content += `件名：${subject}\n`;
   if (rule.customHeader) content += `${rule.customHeader}\n`;
-  
+
   content += `\n${cleanBody}`;
 
-  // 4. 救出したフッターがあれば末尾に結合
   if (savedFooter) {
     content += savedFooter;
   }
- 
+
   return content;
 }
