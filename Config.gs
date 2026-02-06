@@ -135,27 +135,5 @@ const CONFIG = {
       { label: "西", arrow: "➡️" },
       { label: "北西", arrow: "↘️" }
     ]
-  },
-// --- 花粉情報設定 (Open-Meteo Air Quality API) ---
-  POLLEN_CONFIG: {
-    LATITUDE: "35.322356",
-    LONGITUDE: "139.502873",
-    TITLE: "【西鎌倉 花粉飛散予報】",
-    TAG: "#花粉情報",
-    FOOTER: "単位: grains/m³ (個/m³)\n地点: 西鎌倉交差点付近 / 提供: Open-Meteo",
-    
-    // 取得する項目
-    // cedar: スギ, birch: カバノキ属(ヒノキ時期の代用指標として利用)
-    API_PARAMS: "cedar_pollen,birch_pollen",
-    
-    // 数値を日本語ラベルに変換する基準 (環境省等の基準を参考に設定)
-    // 単位: grains/m3
-    LABELS: [
-      { max: 10,   text: "少ない", emoji: "⚪" },
-      { max: 30,   text: "やや多い", emoji: "🟡" },
-      { max: 50,   text: "多い", emoji: "🟠" },
-      { max: 100,  text: "非常に多い", emoji: "🔴" },
-      { max: Infinity, text: "猛烈に多い", emoji: "🟣" }
-    ]
   }
 };
