@@ -20,7 +20,7 @@ function checkGmailAndPostToBand() {
       return;
     }
 
-    // 処理効率のため、各スレッドのメッセージをフラットに並べる
+    // 処理効率のため、各スレッドのメッセージをフラットに並める
     let allMessages = [];
     threads.forEach(thread => {
       thread.getMessages().forEach(msg => {
@@ -64,7 +64,7 @@ function checkGmailAndPostToBand() {
           let bodyForCheck = body;
 
           // 1. Yahooメール（転送含む）の場合、判定範囲を限定してフッター・広告を無視する
-          if (senderEmail === 'kaztsh@gmail.com' || senderEmail === 'alerts-transit@mail.yahoo.co.jp') {
+          if (filterConfig.isYahooTransit) {
             const startMark = "さん";
             const endMark = "このメールに返信されても";
             const startIndex = body.indexOf(startMark);
@@ -116,7 +116,7 @@ function checkGmailAndPostToBand() {
           console.log(`完了(${processedCount}/${totalToProcess}): [${data.date}] ${message.getSubject()}`);
 
           // --- 2. 特定住所が含まれる場合の別BAND投稿（ピーガルくん用） ---
-          if (senderEmail === 'oshirase@kodomoanzen.police.pref.kanagawa.jp') {
+          if (CONFIG.EXTRA_POST_CONFIG.ENABLED_SENDERS.includes(senderEmail)) {
             const watchAddresses = CONFIG.EXTRA_POST_CONFIG.WATCH_ADDRESSES;
             const plainBody = message.getPlainBody();
             const hasTargetAddress = watchAddresses.some(address => plainBody.includes(address));
@@ -185,7 +185,7 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 2. 「救出」するフッター行の特定
+  // 2. 「救出」するフッター行の特定（Copyrightなど）
   let savedFooter = "";
   if (rule.keepFrom) {
     const keepIndex = fullBody.indexOf(rule.keepFrom);
@@ -194,7 +194,7 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 3. 指定位置より下をカット
+  // 3. 指定位置より下をカット（案内文など）
   if (rule.cutOffString) {
     const cutIndex = body.indexOf(rule.cutOffString);
     if (cutIndex !== -1) {
