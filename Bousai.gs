@@ -97,17 +97,38 @@ function checkJmaAndPostToBand() {
       const title = titleMatch[1];
       const detailUrl = linkMatch[1];
 
-      // 地震情報の判定
-      if (title.includes("震源・震度")) {
+      // 地震情報の判定（鎌倉市：震度3以上に限定）
+      if (title.includes("震源") || title.includes("震度")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
-        if (xmlDetail.includes("神奈川県")) {
-          const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
-          const headline = contentMatch ? contentMatch[1] : title;
-          postToBand(`#防災情報\n【地震情報】\n${headline}`);
-          if (updated > latestDateTime) latestDateTime = updated;
-          // 連続投稿制限回避
-          Utilities.sleep(20000);
+        
+        // 鎌倉市の震度情報を抽出
+        const kamakuraMatch = xmlDetail.match(/<Area>.*?<Name>鎌倉市<\/Name>.*?<MaxInt>(.*?)<\/MaxInt>/s);
+        
+        if (kamakuraMatch) {
+          const kamakuraInt = kamakuraMatch[1]; // 観測された震度コード
+          const targetInts = ["3", "4", "5-", "5+", "6-", "6+", "7"]; // 投稿対象とする震度
+          
+          if (targetInts.includes(kamakuraInt)) {
+            const epicenterMatch = xmlDetail.match(/<Hypocenter>.*?<Name>(.*?)<\/Name>/);
+            const magnitudeMatch = xmlDetail.match(/<jmx_eb:Magnitude.*?>(.*?)<\/jmx_eb:Magnitude>/);
+            const maxIntMatch = xmlDetail.match(/<MaxInt>(.*?)<\/MaxInt>/);
+            
+            let detailMsg = title + "\n";
+            if (epicenterMatch) detailMsg += "震源地：" + epicenterMatch[1] + "\n";
+            if (magnitudeMatch) detailMsg += "規模：M" + magnitudeMatch[1] + "\n";
+            if (maxIntMatch) detailMsg += "最大震度：" + maxIntMatch[1].replace(/(\d)[\+\-]/, (m, p1) => p1 + (m.includes('+') ? '強' : '弱')) + "\n";
+            
+            // 鎌倉市の震度を日本語表記に変換
+            const kamakuraIntJP = kamakuraInt.replace("5-", "5弱").replace("5+", "5強").replace("6-", "6弱").replace("6+", "6強");
+            detailMsg += "【鎌倉市の震度：" + kamakuraIntJP + "】";
+
+            postToBand(`#防災情報\n【地震情報】\n${detailMsg}`);
+            if (updated > latestDateTime) latestDateTime = updated;
+            Utilities.sleep(20000);
+          } else {
+            console.log(`鎌倉市の震度は ${kamakuraInt} のため投稿をスキップします。`);
+          }
         }
       }
 
@@ -120,7 +141,6 @@ function checkJmaAndPostToBand() {
           const headline = contentMatch ? contentMatch[1] : title;
           postToBand(`#防災情報\n【津波情報】\n${headline}`);
           if (updated > latestDateTime) latestDateTime = updated;
-          // 連続投稿制限回避
           Utilities.sleep(20000);
         }
       }
@@ -136,7 +156,6 @@ function checkJmaAndPostToBand() {
           const headline = contentMatch ? contentMatch[1] : title;
           postToBand(`#防災情報\n【火山・降灰情報】\n${headline}`);
           if (updated > latestDateTime) latestDateTime = updated;
-          // 連続投稿制限回避
           Utilities.sleep(20000);
         }
       }
