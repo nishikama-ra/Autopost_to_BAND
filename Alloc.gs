@@ -49,7 +49,7 @@ function doGet(e) {
  */
 function main_ProductionRun() {
   setBandDestination('PROD');
-  console.warn("⚠️ 本番モードでメール処理を開始します");
+  console.log("ℹ️ 本番モードでメール処理を開始します");
   checkGmailAndPostToBand();
 }
 
@@ -67,6 +67,7 @@ function debug_TestRun() {
  */
 function triggerWeather_Production() {
   setBandDestination('PROD');
+  console.log("ℹ️ 本番モードで天気予報処理を開始します");
   postWeatherToBand();
 }
 
@@ -75,6 +76,7 @@ function triggerWeather_Production() {
  */
 function debug_WeatherTest() {
   setBandDestination('TEST');
+  console.log("🛠️ テストモードで天気予報処理を開始します");
   postWeatherToBand();
 }
 
@@ -84,6 +86,7 @@ function debug_WeatherTest() {
  */
 function bousai_ProductionRun() {
   setBandDestination('PROD');
+  console.log("ℹ️ 本番モードで防災情報収集処理を開始します");
   checkJmaAndPostToBand();
 }
 
@@ -92,6 +95,7 @@ function bousai_ProductionRun() {
  */
 function bousai_TestRun() {
   setBandDestination('TEST');
+  console.log("🛠️ テストモードで防災情報収集処理を開始します");
   checkJmaAndPostToBand();
 }
 
@@ -100,6 +104,7 @@ function bousai_TestRun() {
  */
 function triggerAnnounce_Production() {
   setBandDestination('PROD');
+  console.log("ℹ️ 本番モードでお知らせ投稿処理を開始します");
   MonthlySecPostToBand();
 }
 
@@ -108,5 +113,32 @@ function triggerAnnounce_Production() {
  */
 function debug_AnnounceTest() {
   setBandDestination('TEST');
+  console.log("🛠️ テストモードでお知らせ投稿処理を開始します");
   MonthlySecPostToBand();
+}
+
+/**
+ * 【月次トリガー用】「周辺情報」と「住宅地」の両方のBANDにお知らせを投稿
+ */
+function triggerAnnounce_MonthlyProduction() {
+  // 1. 「周辺情報」BAND（KEY_PROD_MAIN）への投稿
+  setBandDestination('PROD');
+  console.log("ℹ️ 「周辺情報」BANDへのお知らせ投稿を開始します");
+  MonthlySecPostToBand();
+  
+  // 連続投稿による制限を避けるため20秒待機
+  console.log("20秒待機中...");
+  Utilities.sleep(20000);
+  
+  // 2. 「住宅地」BAND（KEY_PROD_EXTRA）への投稿
+  // setBandDestination('PROD')を実行すると CONFIG.TARGET_BAND_KEY に MAIN が入るため
+  // ここでは明示的に EXTRA のキーをセットして呼び出します
+  const subBandKey = PropertiesService.getScriptProperties().getProperty('KEY_PROD_EXTRA');
+  if (subBandKey) {
+    CONFIG.TARGET_BAND_KEY = subBandKey;
+    console.log("ℹ️ 「住宅地」BANDへのお知らせ投稿を開始します");
+    MonthlySecPostToBand();
+  } else {
+    console.warn("⚠️ 「住宅地」BANDのキー（KEY_PROD_EXTRA）が見つからないため、投稿をスキップしました");
+  }
 }
