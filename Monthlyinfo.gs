@@ -15,23 +15,6 @@ function MonthlySecPostToBand() {
     "3. 端末の管理について 📱\n\n" +
     "・画面ロックの設定 万が一の紛失に備え、スマホやPCには画面ロックを設定しましょう。また、外出先などで端末を放置しないよう気をつけましょう。";
 
-  // 送信パラメータの準備
-  const payload = {
-    'access_token': CONFIG.BAND_ACCESS_TOKEN,
-    'band_key': CONFIG.TARGET_BAND_KEY,
-    'content': message,
-    'do_push': 'true',
-    'sticker_package_id': '1', // パッケージ: Niz (デフォルト)
-    'sticker_id': '1'          // 1: お辞儀（挨拶） / 12: 虫眼鏡（確認）
-  };
-
-  const options = {
-    'method': 'post',
-    'payload': payload,
-    'muteHttpExceptions': true
-  };
-
-  // 実行とログ出力（エラー確認用）
-  const response = UrlFetchApp.fetch('https://openapi.band.us/v2.2/band/post/create', options);
-  console.log("BAND Response: " + response.getContentText());
+  // BandHelper.gs の共通関数を呼び出し
+  postToBand(message);
 }
