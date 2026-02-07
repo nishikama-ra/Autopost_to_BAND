@@ -4,12 +4,12 @@
  * 不明なパラメータ時は安全のため実処理を介さずポータル画面を表示する
  */
 function doGet(e) {
-  const params = e && e.parameter ? e.parameter : {};
+  const params = e && e.parameter ?
+  e.parameter : {};
   const type = params.type || '';
   const modeParam = params.mode || '';
-
   // 1. typeが正しく指定されていない場合は、認可コードの有無を含めAnnounce.gsに判定を委ねる
-  if (type !== 'weather' && type !== 'pollen' && type !== 'traffic') {
+  if (type !== 'weather' && type !== 'pollen' && type !== 'traffic' && type !== 'announce') {
     return renderAnnouncePortal(e);
   }
 
@@ -21,7 +21,8 @@ function doGet(e) {
   
   try {
     setBandDestination(mode);
-    const label = (mode === 'TEST') ? '🛠️ 【テスト】' : '✅ 【本番】';
+    const label = (mode === 'TEST') ?
+    '🛠️ 【テスト】' : '✅ 【本番】';
 
     if (type === 'weather') {
       postWeatherToBand();
@@ -32,6 +33,9 @@ function doGet(e) {
     } else if (type === 'bousai') {
       checkJmaAndPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 防災情報を確認・投稿しました</h2>`);
+    } else if (type === 'announce') {
+      MonthlySecPostToBand();
+      return HtmlService.createHtmlOutput(`<h2>${label} セキュリティ通知を投稿しました</h2>`);
     } 
   } catch (err) {
     return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
@@ -89,4 +93,20 @@ function bousai_ProductionRun() {
 function bousai_TestRun() {
   setBandDestination('TEST');
   checkJmaAndPostToBand();
+}
+
+/**
+ * 【本番用】セキュリティ通知トリガー
+ */
+function triggerAnnounce_Production() {
+  setBandDestination('PROD');
+  MonthlySecPostToBand();
+}
+
+/**
+ * 【テスト用】セキュリティ通知デバッグ
+ */
+function debug_AnnounceTest() {
+  setBandDestination('TEST');
+  MonthlySecPostToBand();
 }
