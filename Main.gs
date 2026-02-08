@@ -175,14 +175,13 @@ function createPostBody(message, senderEmail) {
 
   const subject = message.getSubject() || "無題";
   const fullBody = message.getPlainBody() || "";
-  let body = fullBody;
+  
+  // --- 1. Yahoo!広告ブロックのみを特定して消去（他のルールに影響させない） ---
+  let body = fullBody.replace(/-------------------------\n▼遅延・運休の情報がすぐ届く[\s\S]*?https:\/\/yahoo\.jp\/[a-zA-Z0-9_-]+\n-------------------------/g, "");
 
-  // --- 【追加】Yahoo!路線情報の広告ブロックを事前に削除 ---
-  // 配信設定によってURLが異なるため、汎用的な正規表現で削除します
-  body = body.replace(/-------------------------\n▼遅延・運休の情報がすぐ届く[\s\S]*?https:\/\/yahoo\.jp\/[a-zA-Z0-9_-]+\n-------------------------/g, "");
-  // --------------------------------------------------
-
-  // 1. 指定位置より上をカット
+  // --- 2. 既存のルール処理（ロジックは変えず、余計な改行だけを排除） ---
+  
+  // 指定位置より上をカット
   if (rule.startAfter) {
     const startIndex = body.indexOf(rule.startAfter);
     if (startIndex !== -1) {
@@ -190,17 +189,16 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 2. 「救出」するフッター行の特定（Copyrightなど）
-  // ※ bodyからではなく、広告カット済みの全体から探すように修正
+  // 「救出」するフッター行（Copyrightなど）の抽出
   let savedFooter = "";
   if (rule.keepFrom) {
-    const keepIndex = body.indexOf(rule.keepFrom); // fullBodyからbodyに変更
+    const keepIndex = body.indexOf(rule.keepFrom);
     if (keepIndex !== -1) {
       savedFooter = "\n-------------------------\n" + body.substring(keepIndex).trim();
     }
   }
 
-  // 3. 指定位置より下をカット（案内文など）
+  // 指定位置より下をカット（案内文など）
   if (rule.cutOffString) {
     const cutIndex = body.indexOf(rule.cutOffString);
     if (cutIndex !== -1) {
@@ -208,15 +206,26 @@ function createPostBody(message, senderEmail) {
     }
   }
 
+  // 制御文字の除去
   const cleanBody = body.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
 
+  // --- 3. 組み立て（改行過多を防ぐ） ---
   let content = "";
   if (tag) content += `${tag}\n`;
   content += `件名：${subject}\n`;
   if (rule.customHeader) content += `${rule.customHeader}\n`;
+
+  // 本文の前にある「件名：〜」との間は1行空け、本文自体の前後の空白は除去
   content += `\n${cleanBody}`;
-  if (savedFooter) content += savedFooter;
+
+  if (savedFooter) {
+    // 既にフッターが含まれている（cutOffStringで消されていない）場合のみ結合
+    if (content.indexOf(rule.keepFrom) === -1) {
+      content += savedFooter;
+    }
+  }
 
   return content;
 }
+
 
