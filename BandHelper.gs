@@ -151,9 +151,8 @@ function setBandDestination(mode) {
     CONFIG.TARGET_BAND_KEY = props.getProperty('KEY_TEST_MAIN');
     CONFIG.EXTRA_BAND_KEY = props.getProperty('KEY_TEST_EXTRA');
   }
-  
+
   if (!CONFIG.TARGET_BAND_KEY) {
     throw new Error(`設定エラー: モード ${mode} の宛先キーがプロパティに見つかりません。`);
   }
 }
-
