@@ -72,14 +72,16 @@ function checkJmaAndPostToBand() {
 
       // 投稿用の気象メッセージ構築（警報・特別警報に変化があった場合のみ）
       if (changeMessages.length > 0) {
-        let weatherBody = "【鎌倉市：気象情報】\n";
+        // ★タイトルを変更
+        let weatherBody = "【自動投稿：西鎌倉 気象情報】\n";
         weatherBody += changeMessages.join('\n') + "\n\n";
 
         if (activeList.length > 0) {
           weatherBody += "現在、以下の情報が発表されています。\n";
           weatherBody += activeList.join('\n');
         } else if (currentWarningCodes.length === 0) {
-          weatherBody = "【鎌倉市：気象情報】\n警報・特別警報はすべて解除されました。";
+          // ★こちら側のタイトルも変更
+          weatherBody = "【自動投稿：西鎌倉 気象情報】\n警報・特別警報はすべて解除されました。";
         }
 
         totalMessage += weatherBody + "\n\n";
