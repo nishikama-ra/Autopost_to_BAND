@@ -62,6 +62,12 @@ function test_Bousai() {
   checkJmaAndPostToBand();
 }
 
+function test_DailyBousai() {
+  setBandDestination('TEST');
+  console.log("🛠️ テストモード：防災定期通知（全量）を確認します");
+  postDailyWeatherSummary();
+}
+
 function test_Announce() {
   setBandDestination('TEST');
   console.log("🛠️ テストモード：定期お知らせ投稿を開始します");
@@ -105,6 +111,12 @@ function run_Bousai() {
   setBandDestination('PROD');
   console.log("✅ 本番モード：防災情報の監視を開始します");
   checkJmaAndPostToBand();
+}
+
+function run_DailyBousai() {
+  setBandDestination('PROD');
+  console.log("✅ 本番モード：防災定期通知（全量）を開始します");
+  postDailyWeatherSummary();
 }
 
 function run_Announce() {
