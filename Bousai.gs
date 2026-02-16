@@ -139,22 +139,27 @@ function checkJmaAndPostToBand() {
       else if (title.includes("津波")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
+        // 「相模湾・三浦半島」が含まれる場合のみ（注意報・警報含む）
         if (xmlDetail.includes(conf.WATCH_TSUNAMI_REGION)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          totalMessage += headline + "\n\n";
-          console.log(`津波情報を集約に追加: ${title}`);
+          totalMessage += "【津波情報】\n" + headline + "\n\n";
         }
       }
-      // C. 火山情報の判定
-      else if (title.includes("火山") || title.includes("降灰")) {
+      // C. 火山情報の判定（「定時」予報は除外し、緊急性のあるものに限定）
+      else if ((title.includes("火山") || title.includes("降灰")) && !title.includes("定時")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
-        if (conf.WATCH_VOLCANOES.some(v => xmlDetail.includes(v)) || xmlDetail.includes(conf.PREF_NAME)) {
+        
+        // 1. 監視対象の火山名が含まれているか
+        // 2. または、本文中に「神奈川県」が含まれ、かつ「噴火」や「警報」といった単語があるか
+        const isWatchVolcano = conf.WATCH_VOLCANOES.some(v => xmlDetail.includes(v));
+        const isUrgent = xmlDetail.includes(conf.PREF_NAME) && (xmlDetail.includes("噴火") || xmlDetail.includes("警報"));
+
+        if (isWatchVolcano || isUrgent) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          totalMessage += headline + "\n\n";
-          console.log(`火山情報を集約に追加: ${title}`);
+          totalMessage += "【火山情報】\n" + headline + "\n\n";
         }
       }
       
