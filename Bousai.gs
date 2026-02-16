@@ -193,3 +193,55 @@ function checkJmaAndPostToBand() {
     console.error("処理失敗: " + e.toString());
   }
 }
+
+/**
+ * 12時に注意報を含む全情報を投稿する（宛先設定は呼び出し側で行う）
+ */
+function postDailyWeatherSummary() {
+  const conf = CONFIG.BOUSAI_CONFIG;
+  const master = conf.MASTER;
+  
+  try {
+    const resWarning = UrlFetchApp.fetch(conf.URL_WARNING);
+    const dataWarning = JSON.parse(resWarning.getContentText());
+    
+    let cityData = null;
+    const areaTypes = dataWarning.areaTypes || [];
+    for (let i = areaTypes.length - 1; i >= 0; i--) {
+      const found = areaTypes[i].areas.find(a => a.code === conf.CITY_CODE);
+      if (found && found.warnings) {
+        cityData = found;
+        break;
+      }
+    }
+
+    let activeList = [];
+    if (cityData) {
+      cityData.warnings.forEach(w => {
+        if (w.status === "発表" || w.status === "継続") {
+          const name = master.special_warnings[w.code] || 
+                       master.warnings[w.code] || 
+                       master.advisories[w.code];
+          if (name) activeList.push(name);
+        }
+      });
+    }
+
+    let body = "西鎌倉の気象情報\n";
+    if (activeList.length > 0) {
+      body += "現在、以下の情報が発表されています。\n\n";
+      body += activeList.join('\n');
+    } else {
+      body += "現在、警報・注意報は発表されていません。";
+    }
+
+    const header = "防災情報の定期通知\n──────\n\n";
+    const finalBody = "#防災\n" + header + body;
+
+    // ここでは宛先を固定せず投稿
+    postToBand(finalBody);
+    
+  } catch (e) {
+    console.error("定時投稿失敗: " + e.toString());
+  }
+}
