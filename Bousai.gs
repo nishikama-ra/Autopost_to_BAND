@@ -72,7 +72,7 @@ function checkJmaAndPostToBand() {
 
       // 投稿用の気象メッセージ構築（警報・特別警報に変化があった場合のみ）
       if (changeMessages.length > 0) {
-        let weatherBody = "西鎌倉の気象情報\n";
+        let weatherBody = "🔔西鎌倉の気象情報\n";
         weatherBody += changeMessages.join('\n') + "\n\n";
 
         if (activeList.length > 0) {
@@ -80,7 +80,7 @@ function checkJmaAndPostToBand() {
           weatherBody += activeList.join('\n');
         } else if (currentWarningCodes.length === 0) {
           // ★こちら側のタイトルも変更
-          weatherBody = "西鎌倉の気象情報\n警報・特別警報はすべて解除されました。";
+          weatherBody = "🔔西鎌倉の気象情報\n警報・特別警報はすべて解除されました。";
         }
 
         totalMessage += weatherBody + "\n\n";
@@ -173,7 +173,7 @@ function checkJmaAndPostToBand() {
 
     // --- 3. 統合投稿判定 ---
     if (totalMessage.trim() !== "") {
-      const header = " 防災情報の自動通知\n──────────────\n\n";
+      const header = " 【気象情報の自動投稿です】\n──────────────\n\n";
       const finalBody = "#防災\n" + header + totalMessage.trim();
     
       if (finalBody !== lastPostedContent) {
@@ -227,7 +227,7 @@ function postDailyWeatherSummary() {
       });
     }
 
-    let body = "西鎌倉の気象情報\n";
+    let body = "🔔西鎌倉の気象情報\n";
     if (activeList.length > 0) {
       body += "現在、以下の情報が発表されています。\n\n";
       body += activeList.join('\n');
@@ -235,7 +235,7 @@ function postDailyWeatherSummary() {
       body += "現在、警報・注意報は発表されていません。";
     }
 
-    const header = "防災情報の定期通知\n──────\n\n";
+    const header = "【気象情報の定期自動投稿です】\n──────\n\n";
     const finalBody = "#防災\n" + header + body;
 
     // ここでは宛先を固定せず投稿
