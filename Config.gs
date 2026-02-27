@@ -59,7 +59,7 @@ const CONFIG = {
      'alerts-transit@mail.yahoo.co.jp': {
       isYahooTransit: true, // Yahoo特有の広告除去ロジックを有効化
       priorityRoutes: ['湘南モノレール', '江ノ島電鉄'], // 監視したい路線を追加
-      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開', '直通運転を中止']
+      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開', '直通運転を中止', '全列車各駅停車']
     }
   },
   
@@ -110,7 +110,7 @@ const CONFIG = {
   WEATHER_CONFIG: {
     LATITUDE: "35.322356",
     LONGITUDE: "139.502873",
-    TITLE: "【西鎌倉 3時間おき天気予報】",
+    TITLE: "【西鎌倉 3時間おき天気予報の自動投稿です】",
     TAG: "#天気予報",
     FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点付近 (北緯35.322356/東経139.502873)\n提供: OpenWeatherMap",
     WEATHER_FORECAST_COUNT: 12,
