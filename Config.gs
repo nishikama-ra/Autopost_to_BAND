@@ -164,15 +164,59 @@ const CONFIG = {
   BOUSAI_CONFIG: {
     URL_WARNING: "https://www.jma.go.jp/bosai/warning/data/warning/140000.json",
   // XMLフィードURLをこちらに集約
-    URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml", 
-    //URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml", 
+    //URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml", 
+    URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml", 
   
     CITY_CODE: "1420400", // 鎌倉市
     CITY_NAME: "鎌倉市",
     MIN_INTENSITY: "3",    // 投稿する最小震度
   
+  // 1. XML名前空間（Namespace）の定義
+    // ここで一括管理することで、スキーマ変更時の修正を容易にします。
+    NS: {
+      REPORT: "http://xml.kishou.go.jp/jmaxml1/",
+      HEAD:   "http://xml.kishou.go.jp/jmaxml1/informationBasis1/",
+      VOLC:   "http://xml.kishou.go.jp/jmaxml1/body/volcanology1/",
+      SEIS:   "http://xml.kishou.go.jp/jmaxml1/body/seismology1/",
+      EB:     "http://xml.kishou.go.jp/jmaxml1/elementBasis1/",
+      JMX:    "jmx_eb"
+    },
+
+    // 2. 火山情報の判定・抽出設定
+    VOLCANO: {
+      KEYWORDS: ["火山", "降灰"],              // 判定に使用するタイトルキーワード
+      URGENT_KEYWORDS: ["噴火", "警報"],       // 緊急性を判断するキーワード
+      TITLE_PREFIX: "【自動投稿：",             // タイトル接頭辞
+      USE_HEADLINE_DEDUPLICATION: true ,
+
+      // VFVO52（観測報）から動的に抽出する要素リスト
+      // type属性とdescription属性を持つ要素を指定
+      OBS_ELEMENTS: [
+        'PlumeHeightAboveCrater',   // 火口上噴煙高度
+        'PlumeHeightAboveSeaLevel', // 海抜噴煙高度
+        'PlumeDirection'            // 噴煙の流向
+      ]
+    },
+
+    // 3. 地震情報の判定設定
+    EARTHQUAKE: {
+      TITLE_LABEL: "【地震情報】",
+      TARGET_INTENSITIES: ["3", "4", "5-", "5+", "6-", "6+", "7"], // 投稿対象とする震度
+      JMA_MAIN_OFFICE: "_010000.xml" // 気象庁本庁発行（全国向け）の識別子
+    },
+
+    // 4. メッセージ装飾
+    DECORATION: {
+      TAG_防災: "#防災",
+      SECTION_BORDER: "\n──────────────\n",
+      HEADER_随時: " 【気象情報の自動投稿です】\n",
+      HEADER_定時: "【気象情報の定期自動投稿です】\n"
+    },
+
     PREF_NAME: "神奈川県",
+    //PREF_NAME: "鹿児島県",
     WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島" ],
+    //WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島", "桜島" ],
     WATCH_TSUNAMI_REGION: "相模湾・三浦半島",
     //WATCH_TSUNAMI_REGION: "青森県日本海沿岸",
   
