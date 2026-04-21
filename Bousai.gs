@@ -116,15 +116,15 @@ function checkJmaAndPostToBand() {
 
       // a. 地震情報の判定（鎌倉市：震度3以上に限定）
       // 本庁発行(010000)の電文のみ（他の気象台からの重複をスキップ）
-      if ((title.includes("震源") || title.includes("震度")) && detailUrl.includes("_010000.xml")) {
+      if ((title.includes("震源") || title.includes("震度")) && detailUrl.includes(conf.EARTHQUAKE.JMA_MAIN_OFFICE)) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlText = resDetail.getContentText();
         const doc = XmlService.parse(xmlText);
         const root = doc.getRootElement();
 
         // 名前空間の定義
-        const nsSeis = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/body/seismology1/');
-        const nsEb = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/elementBasis1/');
+        const nsSeis = XmlService.getNamespace(conf.NS.SEIS);
+        const nsEb = XmlService.getNamespace(conf.NS.EB);
 
         // Body > Intensity > Observation の階層を辿る
         const body = root.getChild('Body', nsSeis);
@@ -154,7 +154,7 @@ function checkJmaAndPostToBand() {
         // 鎌倉市があり、かつ震度3以上の場合のみメッセージ
         if (kamakuraData) {
           const kamakuraInt = kamakuraData.maxInt;
-          const targetInts = ["3", "4", "5-", "5+", "6-", "6+", "7"];
+          const targetInts = conf.EARTHQUAKE.TARGET_INTENSITIES;
           
           if (targetInts.includes(kamakuraInt)) {
             // 震源地・マグニチュード・最大震度の取得
@@ -166,7 +166,7 @@ function checkJmaAndPostToBand() {
             const magnitude = earthquake ? earthquake.getChildText('Magnitude', nsEb) : "不明";
             const maxIntAll = observation.getChildText('MaxInt', nsSeis);
 
-            let detailMsg = "【地震情報】\n" + title + "\n";
+            let detailMsg = conf.EARTHQUAKE.TITLE_LABEL + "\n" + title + "\n";
             detailMsg += "震源地：" + epicenter + "\n";
             detailMsg += "規模：M" + magnitude + "\n";
             detailMsg += "最大震度：" + maxIntAll.replace(/(\d)[\+\-]/, (m, p1) => p1 + (m.includes('+') ? '強' : '弱')) + "\n";
@@ -181,13 +181,13 @@ function checkJmaAndPostToBand() {
       }
 
       // b. 津波情報の判定（相模湾・三浦半島）
-      else if (title.includes("津波") && detailUrl.includes("_010000.xml")) {
+      else if (title.includes("津波") && detailUrl.includes(conf.EARTHQUAKE.JMA_MAIN_OFFICE)) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlText = resDetail.getContentText();
         const doc = XmlService.parse(xmlText);
         const root = doc.getRootElement();
         
-        const nsHead = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/informationBasis1/');
+        const nsHead = XmlService.getNamespace(conf.NS.HEAD);
         const head = root.getChild('Head', nsHead);
         // EventID（地震ごとの固有ID）を取得
         const eventId = head ? head.getChildText('EventID', nsHead) : detailUrl;
@@ -214,7 +214,7 @@ function checkJmaAndPostToBand() {
             const maxHeight = item.getChild('MaxHeight', ns);
             let heightText = "";
             if (maxHeight) {
-              const nsEb = XmlService.getNamespace('jmx_eb', 'http://xml.kishou.go.jp/jmaxml1/elementBasis1/');
+              const nsEb = XmlService.getNamespace(conf.NS.JMX, conf.NS.EB);
               const tHeightNode = maxHeight.getChild('TsunamiHeight', nsEb);
               if (tHeightNode) {
                 const typeAttr = tHeightNode.getAttribute('type').getValue();
@@ -237,7 +237,7 @@ function checkJmaAndPostToBand() {
           const eq = allElements.find(e => e.getName() === 'Earthquake');
           if (eq) {
             const nsT = eq.getNamespace();
-            const nsEb = XmlService.getNamespace('jmx_eb', 'http://xml.kishou.go.jp/jmaxml1/elementBasis1/');
+            const nsEb = XmlService.getNamespace(conf.NS.JMX, conf.NS.EB);
             
             tsunamiMsg += `(震源)\n`;
             tsunamiMsg += `発生時刻：${eq.getChildText('OriginTime', nsT)}\n`;
@@ -257,7 +257,7 @@ function checkJmaAndPostToBand() {
           }
 
           // 3. 本文およびコメント（名前空間を使用して抽出）
-          const nsSeis = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/body/seismology1/');
+          const nsSeis = XmlService.getNamespace(conf.NS.SEIS);
           const bodyNode = root.getChild('Body', nsSeis);
           let commentsText = "";
           
@@ -292,19 +292,19 @@ function checkJmaAndPostToBand() {
       }
 
       // c. 火山情報の判定
-      else if (title.includes("火山") || title.includes("降灰")) {
+      else if (conf.VOLCANO.KEYWORDS.some(k => title.includes(k))) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
         
         // 監視対象の火山、または「神奈川県」＋「噴火・警報」の組み合わせで判定
         const isWatchVolcano = conf.WATCH_VOLCANOES.some(v => xmlDetail.includes(v));
-        const isUrgentKanto = xmlDetail.includes(conf.PREF_NAME) && (xmlDetail.includes("噴火") || xmlDetail.includes("警報"));
+        const isUrgentKanto = xmlDetail.includes(conf.PREF_NAME) && conf.VOLCANO.URGENT_KEYWORDS.some(k => xmlDetail.includes(k));
 
         if (isWatchVolcano || isUrgentKanto) {
           const root = XmlService.parse(xmlDetail).getRootElement();
-          const nsHead = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/informationBasis1/');
-          const nsVolc = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/body/volcanology1/');
-          const nsEb = XmlService.getNamespace('http://xml.kishou.go.jp/jmaxml1/elementBasis1/');
+          const nsHead = XmlService.getNamespace(conf.NS.HEAD);
+          const nsVolc = XmlService.getNamespace(conf.NS.VOLC);
+          const nsEb = XmlService.getNamespace(conf.NS.EB);
           
           const head = root.getChild('Head', nsHead);
           const body = root.getChild('Body', nsVolc);
@@ -315,7 +315,7 @@ function checkJmaAndPostToBand() {
           let obsDetail = "";
 
           if (head) {
-            volcanoMsg += `【自動投稿：${head.getChildText('Title', nsHead)}】\n`;
+            volcanoMsg += conf.VOLCANO.TITLE_PREFIX + head.getChildText('Title', nsHead) + conf.TITLE_SUFFIX + "\n";
             const headline = head.getChild('Headline', nsHead);
             if (headline) {
               headlineText = (headline.getChildText('Text', nsHead) || "").trim();
@@ -335,7 +335,7 @@ function checkJmaAndPostToBand() {
               const colorPlume = observation.getChild('ColorPlume', nsVolc);
               if (colorPlume) {
                 // 抽出対象の要素（火口上高度、海抜高度、流向）
-                const plumeElements = ['PlumeHeightAboveCrater', 'PlumeHeightAboveSeaLevel', 'PlumeDirection'];
+                const plumeElements = conf.VOLCANO.OBS_ELEMENTS;
                 plumeElements.forEach(elName => {
                   const el = colorPlume.getChild(elName, nsEb);
                   if (el) {
@@ -382,8 +382,8 @@ function checkJmaAndPostToBand() {
     // --- 3. マージ投稿判定 ---
     //
     if (totalMessage.trim() !== "") {
-      const header = " 【気象情報の自動投稿です】\n──────────────\n\n";
-      const finalBody = "#防災\n" + header + totalMessage.trim();
+      const header = conf.DECORATION.HEADER_随時 + conf.DECORATION.SECTION_BORDER + "\n";
+      const finalBody = conf.DECORATION.TAG_防災 + "\n" + header + totalMessage.trim();
     
       if (finalBody !== lastPostedContent) {
         postToBand(finalBody);
@@ -444,8 +444,8 @@ function postDailyWeatherSummary() {
       body += "現在、警報・注意報は発表されていません。";
     }
 
-    const header = "【気象情報の定期自動投稿です】\n──────\n\n";
-    const finalBody = "#防災\n" + header + body;
+    const header = conf.DECORATION.HEADER_定時 + conf.DECORATION.SECTION_BORDER + "\n";
+    const finalBody = conf.DECORATION.TAG_防災 + "\n" + header + body;
 
     // ここでは宛先を固定せず投稿
     postToBand(finalBody);
