@@ -248,7 +248,7 @@ function checkJmaAndPostToBand() {
               const coord = hypoArea.getChild('Coordinate', nsEb);
               if (coord) tsunamiMsg += `位置詳細：${coord.getAttribute('description').getValue()}\n`;
               const markName = hypoArea.getChildText('NameFromMark', nsT);
-              if (markName) tsunamiMsg += `震源地補助：${markName}\n`;
+              if (markName) tsunamiMsg += `震源地補足：${markName}\n`;
             }
 
             const magNode = eq.getChild('Magnitude', nsEb);
@@ -334,14 +334,19 @@ function checkJmaAndPostToBand() {
             if (observation) {
               const colorPlume = observation.getChild('ColorPlume', nsVolc);
               if (colorPlume) {
-                const hCrater = colorPlume.getChild('PlumeHeightAboveCrater', nsEb);
-                if (hCrater) obsDetail += hCrater.getAttribute('description').getValue() + " ";
-                
-                const hSea = colorPlume.getChild('PlumeHeightAboveSeaLevel', nsEb);
-                if (hSea) obsDetail += `(${hSea.getAttribute('description').getValue()}) `;
-                
-                const direction = colorPlume.getChild('PlumeDirection', nsEb);
-                if (direction) obsDetail += `流向：${direction.getValue()}\n`;
+                // 抽出対象の要素（火口上高度、海抜高度、流向）
+                const plumeElements = ['PlumeHeightAboveCrater', 'PlumeHeightAboveSeaLevel', 'PlumeDirection'];
+                plumeElements.forEach(elName => {
+                  const el = colorPlume.getChild(elName, nsEb);
+                  if (el) {
+                    // type属性から「火口上噴煙高度」等を、descriptionから「火口上1500m」等を取得
+                    const type = el.getAttribute('type') ? el.getAttribute('type').getValue() : "";
+                    const desc = el.getAttribute('description') ? el.getAttribute('description').getValue() : el.getValue();
+                    if (type && desc) {
+                      obsDetail += `${type}：${desc}\n`;
+                    }
+                  }
+                });
               }
               const other = observation.getChildText('OtherObservation', nsVolc);
               if (other) obsDetail += other.trim() + "\n";
