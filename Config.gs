@@ -171,7 +171,7 @@ const CONFIG = {
     MIN_INTENSITY: "3",    // 投稿する最小震度
   
     PREF_NAME: "神奈川県",
-    WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島"],
+    WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島" ],
     WATCH_TSUNAMI_REGION: "相模湾・三浦半島",
   
     TITLE_PREFIX: "【鎌倉市：",
