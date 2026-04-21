@@ -164,7 +164,8 @@ const CONFIG = {
   BOUSAI_CONFIG: {
     URL_WARNING: "https://www.jma.go.jp/bosai/warning/data/warning/140000.json",
   // XMLフィードURLをこちらに集約
-    URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml", 
+    URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml", 
+    //URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml", 
   
     CITY_CODE: "1420400", // 鎌倉市
     CITY_NAME: "鎌倉市",
@@ -173,6 +174,7 @@ const CONFIG = {
     PREF_NAME: "神奈川県",
     WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島" ],
     WATCH_TSUNAMI_REGION: "相模湾・三浦半島",
+    //WATCH_TSUNAMI_REGION: "青森県日本海沿岸",
   
     TITLE_PREFIX: "【鎌倉市：",
     TITLE_SUFFIX: "】",
